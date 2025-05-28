@@ -1,3 +1,15 @@
+<!-- this file centralizes text visible to users -->
+<!-- prevents hardcoding layouts, allows formating of strings -->
+
 <resources>
     <string name="app_name">People Counter</string>
+    <!-- label for total count w placeholder -->
+    <string name="total_label">Total: %1$d</string>
+    <!-- reset button -->
+    <string name="reset">RESET</string>
+    <!-- current ppl count w placeholder -->
+    <string name="people_count">%1$d people</string>
+    <!-- buttons -->
+    <string name="minus">-</string>
+    <string name="plus">+</string>
 </resources>
