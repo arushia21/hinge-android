@@ -24,20 +24,24 @@ import com.example.peoplecounter.ui.theme.PeopleCounterTheme
 import com.example.peoplecounter.viewmodel.PeopleCounterViewModel
 
 /**
- * MainActivity - The main screen of our People Counter app
+ * MainActivity, main screen of people counter
+ * the view of the mvvm architecture
+ *
+ * using jetpack compose here
+ * automatically updates with viewmodel data
+ *
  */
 class MainActivity : ComponentActivity() {
-    
-    // Create the ViewModel (this survives screen rotations)
+
+    // using viewmodel class - people counter viewmodel
     private val viewModel: PeopleCounterViewModel by viewModels()
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Set the content to our Compose UI
+
+        //compose UI
         setContent {
             PeopleCounterTheme {
-                // Main UI composable
                 PeopleCounterScreen(viewModel = viewModel)
             }
         }
@@ -45,79 +49,86 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * The main UI screen built with Jetpack Compose
+ * UI built with Jetpack Compose
+ * describes what UI should look like, compared to traditional view system where have to explicitly define structure 
  */
 @Composable
 fun PeopleCounterScreen(viewModel: PeopleCounterViewModel) {
-    
-    // Observe the data from ViewModel
-    val currentCount by viewModel.currentCount.observeAsState(0)
+
+    // two data values, current and total count of people
+    val currCount by viewModel.currentCount.observeAsState(0)
     val totalCount by viewModel.totalCount.observeAsState(0)
-    
-    // Main container - fills the entire screen
+
+    // main container, fills the entire screen
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
             .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.SpaceBetween // adds even spacing between all items
     ) {
-        
-        // Top section: Total count and Reset button
+
+        // top: total count, reset
         TopSection(
             totalCount = totalCount,
+            //calls view model (as to mvvm architecture) to reset
             onResetClick = { viewModel.resetCounts() }
         )
-        
-        // Center section: Current people count
+
+        // center: curr people count
         CenterSection(
-            currentCount = currentCount,
-            isOverCapacity = viewModel.isOverCapacity()
+            currentCount = currCount,
+            //function that checks if people is greater than 15
+            overCap = viewModel.isOverCapacity()
         )
-        
-        // Bottom section: Plus and Minus buttons
+
+        // bottom: +/- buttons
         BottomSection(
             showMinusButton = viewModel.shouldShowMinusButton(),
-            onPlusClick = { viewModel.incrementCount() },
-            onMinusClick = { viewModel.decrementCount() }
+            //functionality of the buttons
+            plusClick = { viewModel.incrementCount() },
+            minusClick = { viewModel.decrementCount() }
         )
     }
 }
 
 /**
- * Top section with total count and reset button
+ * top: total count, reset
+ * used row layout with horizontal alignment
  */
 @Composable
 fun TopSection(
     totalCount: Int,
-    onResetClick: () -> Unit
+    onResetClick: () -> Unit //no return value
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 24.dp),
+            .padding(horizontal = 16.dp, vertical = 24.dp), //changed spacing to match to the UI in the spec as best as possible
+        //ensured padding on left and right sides of screen, visual readability
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Total count text
+        // total count text
+        // using string variable from strings.xml
         Text(
             text = stringResource(R.string.total_label, totalCount),
             fontSize = 24.sp,
             fontWeight = FontWeight.Medium,
-            color = Color(0xFF6200EE) // Purple color
+            color = Color(0xFF6200EE) // purple
         )
-        
-        // Reset button
+
+        // reset button
         Button(
-            onClick = onResetClick,
+            onClick = onResetClick, //reset function passed in
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
                 contentColor = Color.White
             ),
-            shape = RoundedCornerShape(6.dp)
+            shape = RoundedCornerShape(6.dp) //added rounded corners to match UI in spec
         ) {
             Text(
-                text = stringResource(R.string.reset),
+                text = stringResource(R.string.reset), //used string variable from strings.xml
                 fontWeight = FontWeight.Medium
             )
         }
@@ -125,89 +136,95 @@ fun TopSection(
 }
 
 /**
- * Center section with current people count
- * Changes color to red if over capacity (15 people)
+ * center: text with curr ppl count
+ * change color to red if over 15 ppl
+ * using box as container to center content
  */
 @Composable
 fun CenterSection(
     currentCount: Int,
-    isOverCapacity: Boolean
+    overCap: Boolean
 ) {
     Box(
         modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center //centering content
     ) {
         Text(
             text = stringResource(R.string.people_count, currentCount),
             fontSize = 40.sp,
             fontWeight = FontWeight.Medium,
-            color = if (isOverCapacity) Color.Red else Color(0xFF6200EE), // Red if over capacity, purple otherwise
+            //using if statement to check if over 15 ppl, change to red
+            //otherwise the text should stay purple
+            color = if (overCap) Color.Red else Color(0xFF6200EE),
             textAlign = TextAlign.Center
         )
     }
 }
 
 /**
- * Bottom section with plus and minus buttons
- * FIXED: Plus button stays in same position whether minus is shown or not
- * RESPONSIVE: Button spacing adapts to screen width (closer in portrait, further in landscape)
+ * bottom: +/- buttons
+ * recent commit to ui change: making button spacing responsive to screen width
+ * therefore it is proportional and is closer in porttrait, further in landscape
+ *
+ * minus button hides when count = 0
  */
 @Composable
 fun BottomSection(
     showMinusButton: Boolean,
-    onPlusClick: () -> Unit,
-    onMinusClick: () -> Unit
+    plusClick: () -> Unit,
+    minusClick: () -> Unit
 ) {
-    // Get current screen configuration
+    // using configuration to get screen width
+    // this allows for responsive spacing based on screen size below
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
-    
-    // Calculate responsive spacing: 12% of screen width
-    // Portrait (~360dp): ~43dp spacing
-    // Landscape (~640dp): ~77dp spacing
+
+    // responsive spacing - 0.2f (eyeballed from spec)
     val buttonSpacing = screenWidth * 0.2f
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 32.dp, vertical = 24.dp),
+            .padding(horizontal = 32.dp, vertical = 24.dp), //modified spacing to match UI in spec
         horizontalArrangement = Arrangement.spacedBy(buttonSpacing, Alignment.CenterHorizontally)
     ) {
-        // Minus button (only shown if count > 0) - LEFT SIDE
+        // LEFT SIDE: - button
+        //only shown if count > 0
         if (showMinusButton) {
             Button(
-                onClick = onMinusClick,
+                onClick = minusClick,
                 modifier = Modifier
                     .width(120.dp)
                     .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF6200EE), // Purple
+                    containerColor = Color(0xFF6200EE), // purple
                     contentColor = Color.White
                 ),
-                shape = RoundedCornerShape(6.dp) // Less rounded - was 24.dp
+                shape = RoundedCornerShape(6.dp) //made buttons slightly rounded, as in UI spec
             ) {
                 Text(
-                    text = stringResource(R.string.minus),
+                    text = stringResource(R.string.minus), //using string from strings.xml
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
         } else {
-            // Invisible spacer to keep plus button in same position
+            // still adds spacing to keep + button in same position
+            // so when - is hidden, + button doesnt move
             Spacer(modifier = Modifier.width(120.dp))
         }
-        
-        // Plus button (always shown) - RIGHT SIDE - STAYS IN SAME POSITION
+
+        // RIGHT SIDE + button
         Button(
-            onClick = onPlusClick,
+            onClick = plusClick,
             modifier = Modifier
                 .width(120.dp)
                 .height(48.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF6200EE), // Purple
+                containerColor = Color(0xFF6200EE), // purple
                 contentColor = Color.White
             ),
-            shape = RoundedCornerShape(6.dp) // Less rounded - was 24.dp
+            shape = RoundedCornerShape(6.dp) ///made buttons slightly rounded, as in UI spec
         ) {
             Text(
                 text = stringResource(R.string.plus),

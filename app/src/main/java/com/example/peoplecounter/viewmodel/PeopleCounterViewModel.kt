@@ -7,158 +7,150 @@ import androidx.lifecycle.LiveData
 import com.example.peoplecounter.model.PeopleCounterRepository
 
 /**
- * ViewModel for the People Counter app - Updated with Data Persistence
- * 
- * What changed?
- * - Now extends AndroidViewModel instead of ViewModel (so we can access Context)
- * - Uses PeopleCounterRepository to save and load data
- * - Automatically loads saved data when created
- * - Automatically saves data whenever it changes
- * 
- * Why AndroidViewModel?
- * - AndroidViewModel gives us access to the Application context
- * - We need context to create SharedPreferences
- * - Application context is safe to use (won't cause memory leaks)
+ * ViewModel, uses Data Persistance
+ *
+ * goal: manage UI related data, persists through config changes
+ * adds functionality, bridges UI and model
+ *
+ * Note: I'm using AndroidViewModel instead of regular ViewModel
+ * allows me to use application context, for data persistence (so it works through app sessions)
  */
 class PeopleCounterViewModel(application: Application) : AndroidViewModel(application) {
     
-    // Create our repository (the data storage handler)
-    private val repository = PeopleCounterRepository(application.applicationContext)
-    
-    // Private mutable variables (only this ViewModel can change them)
-    private val _currentCount = MutableLiveData<Int>()
+    // creates our repository - the MODEL
+    // repository handles all the SharedPreferences details
+    private val repo = PeopleCounterRepository(application.applicationContext)
+
+    // private variables for the view model
+    // keeping track of the curr and total count of people
+    private val _currCount = MutableLiveData<Int>()
     private val _totalCount = MutableLiveData<Int>()
     
-    // Public read-only variables (the UI can observe these)
-    val currentCount: LiveData<Int> = _currentCount
+    // public variables: encapsulation
+    // view can view these variables
+    val currentCount: LiveData<Int> = _currCount
     val totalCount: LiveData<Int> = _totalCount
     
     /**
-     * Initialize the ViewModel
-     * This runs automatically when the ViewModel is created
+     * ViewModel initialized
      */
     init {
+        // data persistence - loading saved data from previous app sessions
         loadSavedData()
     }
     
     /**
-     * Load saved data from persistent storage
-     * This runs when the app starts up
+     *
+     * load saved data from persistent storage
+     * if the repo has no saved data, starts BOTH COUNTS with 0,0
      */
     private fun loadSavedData() {
-        // Check if this is the first time the app is running
-        if (!repository.hasSavedData()) {
-            // First time launch - start with 0,0
-            _currentCount.value = 0
+        // check if repo has any saved data with SharedPreferences
+        if (!repo.hasSavedData()) {
+            // first time launch - start with 0,0
+            // sets private variables here
+            _currCount.value = 0
             _totalCount.value = 0
-            println("First launch - Starting with 0,0")
+            // println("First launch - Starting with 0,0") // debugging here
         } else {
-            // Load existing saved data
-            val savedCounts = repository.getBothCounts()
-            _currentCount.value = savedCounts.first  // savedCounts.first is the current count
-            _totalCount.value = savedCounts.second   // savedCounts.second is the total count
-            println("Loaded saved data - Current: ${savedCounts.first}, Total: ${savedCounts.second}")
+            // load existing saved data from previous sessions
+            // returns Pair<current, total>
+            val savedCounts = repo.getBothCounts()
+            _currCount.value = savedCounts.first  // current count
+            _totalCount.value = savedCounts.second   // total count
+            // println("Loaded saved data - Current: ${savedCounts.first}, Total: ${savedCounts.second}")
         }
+        // livedata updates immediately with the loaded data
     }
     
     /**
-     * Increments both current and total count
-     * Called when user presses the "+" button
-     * 
-     * What's new: Now saves data after updating
+     * Logic to increment both current and total count: + button
      */
     fun incrementCount() {
-        val current = _currentCount.value ?: 0
+        // get current values, default to 0 if null
+        val current = _currCount.value ?: 0
         val total = _totalCount.value ?: 0
         
-        // Update the values
+        // both go up by 1 when someone enters
         val newCurrent = current + 1
         val newTotal = total + 1
         
-        _currentCount.value = newCurrent
+        // livedata: automatically updates ui
+        _currCount.value = newCurrent
         _totalCount.value = newTotal
         
-        // Save the new values to persistent storage
-        repository.saveBothCounts(newCurrent, newTotal)
+        // saves the values to persistent storage IMMEDIATELY, in case of crash/closing
+        repo.saveBothCounts(newCurrent, newTotal)
         
-        // Optional: Log for debugging
-        println("Incremented - Current: $newCurrent, Total: $newTotal")
+        // println("Incremented - Current: $newCurrent, Total: $newTotal") //debugging
     }
     
     /**
-     * Decrements only the current count (not total)
-     * Called when user presses the "-" button
-     * Only works if current count is greater than 0
-     * 
-     * What's new: Now saves data after updating
+     * Logic: decrementing current count only: - button
+     * only works if current count is greater than 0
      */
     fun decrementCount() {
-        val current = _currentCount.value ?: 0
+        // current value, default to 0 if null
+        val current = _currCount.value ?: 0
+        
+        // can only have >= 0 people in store
         if (current > 0) {
             val newCurrent = current - 1
-            _currentCount.value = newCurrent
             
-            // Save only the current count (total stays the same)
-            repository.saveCurrentCount(newCurrent)
+            // update current count only
+            _currCount.value = newCurrent
             
-            // Optional: Log for debugging
-            println("Decremented - Current: $newCurrent")
+            // save only the current count
+            repo.saveCurrentCount(newCurrent)
+            // println("Decremented - Current: $newCurrent") //debugging
         }
     }
     
     /**
-     * Resets both counters to zero
-     * Called when user presses the "RESET" button
-     * 
-     * What's new: Now saves data after updating
+     * Resent functionality
      */
     fun resetCounts() {
-        _currentCount.value = 0
+        // set both counts back to 0
+        _currCount.value = 0
         _totalCount.value = 0
         
-        // Save the reset values
-        repository.saveBothCounts(0, 0)
-        
-        // Optional: Log for debugging
-        println("Reset both counts to 0")
+        // save the reset values to storage - persistence
+        repo.saveBothCounts(0, 0)
+        // println("Reset both counts to 0") //debugging
     }
     
     /**
-     * Helper function to check if current count is over capacity (15 people)
-     * Used to determine if text should be red
-     * 
-     * No changes needed here
+     * Helper: checks if over 15 people for red text in View
      */
     fun isOverCapacity(): Boolean {
-        return (_currentCount.value ?: 0) > 15
+        return (_currCount.value ?: 0) > 15
     }
     
     /**
-     * Helper function to check if minus button should be visible
-     * Minus button is hidden when current count is 0
-     * 
-     * No changes needed here
+     * Helper: minus button hidden when current count is 0
      */
     fun shouldShowMinusButton(): Boolean {
-        return (_currentCount.value ?: 0) > 0
+        // return true if count > 0, false if count = 0
+        return (_currCount.value ?: 0) > 0
     }
     
     /**
-     * Optional: Method to clear all saved data
-     * Useful for testing or if you want to add a "Clear All Data" feature
+     * clear Saved Data: testing
      */
     fun clearAllSavedData() {
-        repository.clearAllData()
-        _currentCount.value = 0
+        // repo wipes all saved data
+        repo.clearAllData()
+        _currCount.value = 0
         _totalCount.value = 0
-        println("Cleared all saved data")
+
+        //println("Cleared all saved data")
     }
-    
+
     /**
-     * Optional: Check if we have saved data
-     * Could be useful to show a "Welcome back!" message or tutorial for new users
+     * check if we have saved data?
      */
     fun hasSavedData(): Boolean {
-        return repository.hasSavedData()
+        // delegate to repo to check
+        return repo.hasSavedData()
     }
 }
