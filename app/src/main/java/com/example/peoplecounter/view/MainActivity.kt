@@ -6,12 +6,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,12 +25,6 @@ import com.example.peoplecounter.viewmodel.PeopleCounterViewModel
 
 /**
  * MainActivity - The main screen of our People Counter app
- * 
- * What's happening here?
- * 1. We create a ViewModel to hold our data and logic
- * 2. We use Compose to build the UI declaratively
- * 3. We observe the ViewModel's data and automatically update the UI when it changes
- * 4. We call ViewModel functions when buttons are pressed
  */
 class MainActivity : ComponentActivity() {
     
@@ -50,17 +46,11 @@ class MainActivity : ComponentActivity() {
 
 /**
  * The main UI screen built with Jetpack Compose
- * 
- * What is @Composable?
- * - A function that describes what the UI should look like
- * - Gets called automatically when data changes
- * - No need to manually update views like in traditional Android
  */
 @Composable
 fun PeopleCounterScreen(viewModel: PeopleCounterViewModel) {
     
     // Observe the data from ViewModel
-    // These will automatically trigger UI updates when the data changes
     val currentCount by viewModel.currentCount.observeAsState(0)
     val totalCount by viewModel.totalCount.observeAsState(0)
     
@@ -105,7 +95,7 @@ fun TopSection(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 24.dp),
+            .padding(horizontal = 16.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -123,7 +113,8 @@ fun TopSection(
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
                 contentColor = Color.White
-            )
+            ),
+            shape = RoundedCornerShape(6.dp)
         ) {
             Text(
                 text = stringResource(R.string.reset),
@@ -158,7 +149,8 @@ fun CenterSection(
 
 /**
  * Bottom section with plus and minus buttons
- * Minus button is hidden when count is 0
+ * FIXED: Plus button stays in same position whether minus is shown or not
+ * RESPONSIVE: Button spacing adapts to screen width (closer in portrait, further in landscape)
  */
 @Composable
 fun BottomSection(
@@ -166,50 +158,60 @@ fun BottomSection(
     onPlusClick: () -> Unit,
     onMinusClick: () -> Unit
 ) {
+    // Get current screen configuration
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    
+    // Calculate responsive spacing: 12% of screen width
+    // Portrait (~360dp): ~43dp spacing
+    // Landscape (~640dp): ~77dp spacing
+    val buttonSpacing = screenWidth * 0.2f
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 64.dp, vertical = 32.dp),
-        horizontalArrangement = Arrangement.spacedBy(32.dp)
+            .padding(horizontal = 32.dp, vertical = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(buttonSpacing, Alignment.CenterHorizontally)
     ) {
-        // Minus button (only shown if count > 0)
+        // Minus button (only shown if count > 0) - LEFT SIDE
         if (showMinusButton) {
             Button(
                 onClick = onMinusClick,
                 modifier = Modifier
-                    .weight(1f)
+                    .width(120.dp)
                     .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF6200EE), // Purple
                     contentColor = Color.White
-                )
+                ),
+                shape = RoundedCornerShape(6.dp) // Less rounded - was 24.dp
             ) {
                 Text(
                     text = stringResource(R.string.minus),
-                    fontSize = 24.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
         } else {
-            // Empty space when minus button is hidden
-            //takes up the same amnt of space, so plus button in same position
-            Spacer(modifier = Modifier.weight(1f))
+            // Invisible spacer to keep plus button in same position
+            Spacer(modifier = Modifier.width(120.dp))
         }
         
-        // Plus button (always shown)
+        // Plus button (always shown) - RIGHT SIDE - STAYS IN SAME POSITION
         Button(
             onClick = onPlusClick,
             modifier = Modifier
-                .weight(1f)
+                .width(120.dp)
                 .height(48.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF6200EE), // Purple
                 contentColor = Color.White
-            )
+            ),
+            shape = RoundedCornerShape(6.dp) // Less rounded - was 24.dp
         ) {
             Text(
                 text = stringResource(R.string.plus),
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Medium
             )
         }

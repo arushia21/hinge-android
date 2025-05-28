@@ -51,8 +51,8 @@ dependencies {
     implementation(libs.androidx.material3)
     
     // Add these dependencies for ViewModel and LiveData with Compose
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
-    implementation("androidx.compose.runtime:runtime-livedata:1.8.2")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.compose.runtime.livedata)
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
